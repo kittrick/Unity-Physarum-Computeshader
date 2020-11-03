@@ -77,6 +77,7 @@ float2 RotateAroundPoint(float2 p, float2 pivot, float angle) {
     // translate point back:
     p.x = xnew + pivot.x;
     p.y = ynew + pivot.y;
+    
     return p;
 }
 
@@ -129,10 +130,10 @@ float2 SensorTurn(uint3 id, Agent a)
     for(int i = 1; i < sensorCount; i++){
         if(i % 2.0 == 1.0){
             sensors[i] = RotateAroundPoint(sensors[0], a.position, i * sensorAngle);
-            angles[i] = 10; //i * sensorAngle;
+            angles[i] = i * sensorAngle;
         } else {
             sensors[i] = RotateAroundPoint(sensors[0], a.position, -1 * (i - 1) * sensorAngle);
-            angles[i] = 10; -1 * (i - 1) * sensorAngle;
+            angles[i] = -1 * (i - 1) * sensorAngle;
         }
     }
     

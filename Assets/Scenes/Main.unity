@@ -351,7 +351,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 525c6905e7e9c4daab3c144c3f5d7d01, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  agentsCount: 1000000
+  agentsCount: 60620
   trailDecayFactor: 0.9
   diffusionRange: 1
   sensorCount: 3
