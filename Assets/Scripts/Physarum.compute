@@ -116,29 +116,44 @@ float2 SensorTurn(uint3 id, Agent a)
 {   
     // Array of sensor positions
     float2 sensors[50];
+    float angles[50];
 
     // For debug
     float4 red = float4(1,0,0,1);
     float4 green = float4(0,1,0,1);
     float4 blue = float4(0,0,1,1);
     
-    // Get max val from sensors
-    //Sensor one
+    // Position Sensors
     sensors[0] = a.position + a.direction * sensorRange;
+    angles[0] = 0;
     for(int i = 1; i < sensorCount; i++){
         if(i % 2.0 == 1.0){
             sensors[i] = RotateAroundPoint(sensors[0], a.position, i * sensorAngle);
+            angles[i] = 10; //i * sensorAngle;
         } else {
             sensors[i] = RotateAroundPoint(sensors[0], a.position, -1 * (i - 1) * sensorAngle);
+            angles[i] = 10; -1 * (i - 1) * sensorAngle;
         }
     }
     
+    // Get Max Value
+    float maxVal = 0;
+    int bestSensor = 0;
     for(int j = 0; j < sensorCount; j++){
-        debugTex[sensors[j]] = red;
+        if(distance(sensors[j], float2(0,0)) != 0){
+            float level = readTex.SampleLevel(sampler_readTex, sensors[j] / (float)rez, 0).r;
+            if(level > maxVal){
+                maxVal = level;
+                bestSensor = j;
+            }
+        }
+        //debugTex[sensors[j]] = red;
     }
     
+    //debugTex[sensors[bestSensor]] = green;
+    
     // Output new direction
-    float2 d = a.direction;
+    float2 d = RotateAroundPoint(a.direction, float2(0,0), angles[bestSensor]);
     d = normalize(d);
     
     // Return new direction
