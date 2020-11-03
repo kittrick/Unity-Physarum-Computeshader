@@ -18,8 +18,12 @@ public class Physarum : MonoBehaviour
     public float trailDecayFactor = .9f;
     [Range(1,10)]
     public int diffusionRange = 1;
-    [Range(0, 1)]
-    public float sensorAngle = 0;
+    [Range(1, 360)]
+    public int sensorCount = 3;
+    [Range(0, 1080)]
+    public float sensorRange = 1;
+    [Range(0, 360)]
+    public float sensorAngle = 45;
 
     [Header("Mouse Input")]
     [Range(0, 100)]
@@ -179,8 +183,9 @@ public class Physarum : MonoBehaviour
         cs.SetTexture(diffuseTextureKernel, "writeTex", writeTex);
         cs.SetFloat("trailDecayFactor", trailDecayFactor);
         cs.SetInt("diffusionRange", diffusionRange);
+        cs.SetInt("sensorCount", sensorCount);
+        cs.SetFloat("sensorRange", sensorRange);
         cs.SetFloat("sensorAngle", sensorAngle);
-        
         cs.Dispatch(diffuseTextureKernel, rez, rez, 1);
     }
 

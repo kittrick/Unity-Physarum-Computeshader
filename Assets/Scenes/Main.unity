@@ -351,10 +351,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 525c6905e7e9c4daab3c144c3f5d7d01, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  agentsCount: 108968
+  agentsCount: 64
   trailDecayFactor: 0.9
   diffusionRange: 1
-  sensorAngle: 0
+  sensorCount: 3
+  sensorRange: 10
+  sensorAngle: 45
   brushSize: 10
   interactivePlane: {fileID: 1400947903}
   cam: {fileID: 1248560898}

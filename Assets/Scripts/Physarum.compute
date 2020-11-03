@@ -33,6 +33,8 @@ uint stepn;
 uint time;
 float trailDecayFactor;
 int diffusionRange;
+int sensorCount;
+float sensorRange;
 float sensorAngle;
 float2 hitXY;
 int brushSize;
@@ -50,6 +52,32 @@ float2 Random(float2 p) {
 
 float2 RandomDirection(float2 p) {
     return (normalize(2.0 * (Random(p)- 0.5)));
+}
+
+float deg2rad(float angle){
+    return angle * 3.14159265359 / 180;
+}
+
+float2 RotateAroundPoint(float2 p, float2 pivot, float angle) {
+    
+    // Convert to radians
+    angle = deg2rad(angle);
+    
+    float s = sin(angle);
+    float c = cos(angle);
+    
+    // translate point back to origin:
+    p.x -= pivot.x;
+    p.y -= pivot.y;
+    
+    // rotate point
+    float xnew = p.x * c - p.y * s;
+    float ynew = p.x * s + p.y * c;
+    
+    // translate point back:
+    p.x = xnew + pivot.x;
+    p.y = ynew + pivot.y;
+    return p;
 }
 
 // ------------------------------------------------------------
@@ -84,71 +112,28 @@ void WriteTrailsKernel(uint3 id : SV_DispatchThreadID)
 }
 
 // Turn based on surroundings
-float2 NeighborhoodTurns(uint3 id, Agent a)
-{
-    float2 vectors[50];
-    float maxTrail = 0;
-    int i = 0;
+float2 SensorTurn(uint3 id, Agent a)
+{   
+    // For debug
+    float4 red = float4(1,0,0,1);
+    float4 green = float4(0,1,0,1);
+    float4 blue = float4(0,0,1,1);
     
-    for (int x = -diffusionRange; x <= diffusionRange; x++) {
-        for (int y = -diffusionRange; y <= diffusionRange; y++){
-            if(!(x == 0 && y == 0)) {
-                float2 direction = float2(x, y);
-                // Hacky, but we are just exploring
-                if (dot(normalize(direction), a.direction) > sensorAngle){
-                    uint2 coord = round(a.position + direction);
-                    
-                    float level = readTex.SampleLevel(sampler_readTex, coord / (float)rez, 0).r;
-                    
-                    if(level == maxTrail){
-                        vectors[i] = normalize(float2(x,y));
-                        i++;
-                    }
-                    else if(level >= maxTrail) {
-                        maxTrail = level;
-                        i = 0;
-                        vectors[i] = normalize(float2(x,y));
-                        i++;
-                    }
-                    
-                    //if(stepn % 2 == 0) {
-                        // Mark blue the neighborhood being read
-                        //debugTex[coord] += float4(0, 0, 1, 0);
-                    //}
-                }
-            }
-        }
-    }
+    // Get max val from sensors
+    //Sensor one
+    float2 Sensor1 = a.position + a.direction * sensorRange;
+    float2 Sensor2 = RotateAroundPoint(Sensor1, a.position, sensorAngle);
+    float2 Sensor3 = RotateAroundPoint(Sensor1, a.position, -sensorAngle);
+    
+    debugTex[Sensor1] = red;
+    debugTex[Sensor2] = green;
+    debugTex[Sensor3] = blue;
+    
+    // Output new direction
     float2 d = a.direction;
-    if (maxTrail >= .1) {
-        int index = (i - 1) * round(Random(id.xy * 0.01 + sin(time)).x);
-        d = d + vectors[index] * .9;
-    } else {
-        d = RandomDirection(id.xx * .001 + sin(time));
-    }
-    
     d = normalize(d);
     
-    // Mark red the next direction
-    //if (stepn % 2 == 0) {
-    //    debugTex[round(a.position + d)] += float4(1, 0, 0, 0);
-    //}
-    
-    return d;
-}
-
-// Random turn function
-float2 SimpleTurns(uint3 id : SV_DispatchThreadID, Agent a)
-{
-    // We will use round whenever reading from or writing to the grid tex
-    float4 f = readTex[round(a.position + a.direction * 2)];
-    
-    float2 d = a.direction;
-    
-    if(f.x > 0) {
-        d = RandomDirection(id.xx * .01 + sin(time));
-    }
-    
+    // Return new direction
     return d;
 }
 
@@ -158,7 +143,7 @@ void MoveAgentsKernel(uint3 id : SV_DispatchThreadID)
     Agent a = agentsBuffer[id.x];
     
     // Choose next direction
-    a.direction = NeighborhoodTurns(id, a);
+    a.direction = SensorTurn(id, a);
     
     // Move Forward
     a.position = a.position + a.direction;
@@ -218,8 +203,8 @@ void RenderKernel(uint3 id : SV_DispatchThreadID)
     } else {
         outTex[id.xy] = readTex[id.xy];
     }
-    //outTex[id.xy] += debugTex[id.xy];
-    //debugTex[id.xy] = 0;
+    outTex[id.xy] += debugTex[id.xy];
+    debugTex[id.xy] = 0;
 }
 
 [numthreads(64, 1, 1)]
