@@ -31,6 +31,7 @@ public class Physarum : MonoBehaviour
     // Global Parameters
     // ------------------------------
     [Header("Setup")]
+    public Camera cam;
 
     [Range(8, 2048)]
     public int rez = 512;
@@ -154,6 +155,7 @@ public class Physarum : MonoBehaviour
 
     void HandleInput()
     {
+        
         if (!Input.GetMouseButton(0))
         {
             hitXY.x = hitXY.y = 0;
@@ -161,17 +163,14 @@ public class Physarum : MonoBehaviour
         }
 
         RaycastHit hit;
-        if (!Physics.Raycast(Camera.main.ScreenPointToRay(Input.mousePosition), out hit, Mathf.Infinity))
+        if (Physics.Raycast(cam.ScreenPointToRay(Input.mousePosition), out hit, Mathf.Infinity))
         {
-            return;
+            if (hit.transform != interactivePlane.transform)
+            {
+                return;
+            }
+            hitXY = hit.textureCoord * rez;
         }
-
-        if (hit.transform != interactivePlane.transform)
-        {
-            return;
-        }
-
-        hitXY = hit.textureCoord * rez;
     }
 
     private void GPUDiffuseTextureKernel()
@@ -227,7 +226,7 @@ public class Physarum : MonoBehaviour
        cs.SetTexture(renderKernel, "readTex", readTex);
        cs.SetTexture(renderKernel, "outTex", outTex);
        cs.SetTexture(renderKernel, "debugTex", debugTex);
-        
+       cs.SetVector("hitXY", hitXY);
        cs.Dispatch(renderKernel, rez, rez, 1);
     }
 

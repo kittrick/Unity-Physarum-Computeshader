@@ -330,6 +330,7 @@ GameObject:
   - component: {fileID: 1400947907}
   - component: {fileID: 1400947906}
   - component: {fileID: 1400947905}
+  - component: {fileID: 1400947908}
   - component: {fileID: 1400947904}
   m_Layer: 0
   m_Name: Physarum
@@ -350,10 +351,18 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 525c6905e7e9c4daab3c144c3f5d7d01, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  agentCount: 1000
+  agentsCount: 108968
+  trailDecayFactor: 0.9
+  diffusionRange: 1
+  sensorAngle: 0
+  brushSize: 10
+  interactivePlane: {fileID: 1400947903}
+  cam: {fileID: 1248560898}
+  rez: 1080
+  stepsPerFrame: 1
+  stepMod: 1
   cs: {fileID: 7200000, guid: 693eaaef45d0f4fc7867356869796861, type: 3}
   outMat: {fileID: 2100000, guid: e325b79b52dd04b118219f7164fe6d84, type: 2}
-  rez: 1080
 --- !u!23 &1400947905
 MeshRenderer:
   m_ObjectHideFlags: 0
@@ -415,3 +424,17 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 2
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!64 &1400947908
+MeshCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1400947903}
+  m_Material: {fileID: 0}
+  m_IsTrigger: 0
+  m_Enabled: 1
+  serializedVersion: 4
+  m_Convex: 0
+  m_CookingOptions: 30
+  m_Mesh: {fileID: 10209, guid: 0000000000000000e000000000000000, type: 0}
