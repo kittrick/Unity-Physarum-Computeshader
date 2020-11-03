@@ -114,6 +114,9 @@ void WriteTrailsKernel(uint3 id : SV_DispatchThreadID)
 // Turn based on surroundings
 float2 SensorTurn(uint3 id, Agent a)
 {   
+    // Array of sensor positions
+    float2 sensors[50];
+
     // For debug
     float4 red = float4(1,0,0,1);
     float4 green = float4(0,1,0,1);
@@ -121,13 +124,18 @@ float2 SensorTurn(uint3 id, Agent a)
     
     // Get max val from sensors
     //Sensor one
-    float2 Sensor1 = a.position + a.direction * sensorRange;
-    float2 Sensor2 = RotateAroundPoint(Sensor1, a.position, sensorAngle);
-    float2 Sensor3 = RotateAroundPoint(Sensor1, a.position, -sensorAngle);
+    sensors[0] = a.position + a.direction * sensorRange;
+    for(int i = 1; i < sensorCount; i++){
+        if(i % 2.0 == 1.0){
+            sensors[i] = RotateAroundPoint(sensors[0], a.position, i * sensorAngle);
+        } else {
+            sensors[i] = RotateAroundPoint(sensors[0], a.position, -1 * (i - 1) * sensorAngle);
+        }
+    }
     
-    debugTex[Sensor1] = red;
-    debugTex[Sensor2] = green;
-    debugTex[Sensor3] = blue;
+    for(int j = 0; j < sensorCount; j++){
+        debugTex[sensors[j]] = red;
+    }
     
     // Output new direction
     float2 d = a.direction;
