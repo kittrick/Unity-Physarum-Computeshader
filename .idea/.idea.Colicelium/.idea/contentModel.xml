@@ -5,10 +5,38 @@
       <e p="Assembly-CSharp-Editor.csproj" t="IncludeRecursive" />
       <e p="Assembly-CSharp.csproj" t="IncludeRecursive" />
       <e p="Assets" t="Include">
-        <e p="Materials" t="Include">
-          <e p="Physarum.compute" t="Include" />
+        <e p="EasyButtons" t="Include">
+          <e p="Assets" t="Include">
+            <e p="EasyButtons" t="Include">
+              <e p="Editor" t="Include">
+                <e p="ButtonEditor.cs" t="Include" />
+                <e p="EasyButtons.Editor.asmdef" t="Include" />
+                <e p="EasyButtonsEditorExtensions.cs" t="Include" />
+              </e>
+              <e p="Runtime" t="Include">
+                <e p="ButtonAttribute.cs" t="Include" />
+                <e p="EasyButtons.asmdef" t="Include" />
+              </e>
+              <e p="Samples" t="Include">
+                <e p="ButtonsExample" t="Include">
+                  <e p="ButtonsExample.cs" t="Include" />
+                </e>
+                <e p="CustomEditorButtonsExample" t="Include">
+                  <e p="CustomEditorButtonsExample.cs" t="Include" />
+                  <e p="Editor" t="Include">
+                    <e p="CustomEditorButtonsExampleEditor.cs" t="Include" />
+                  </e>
+                </e>
+                <e p="ScriptableObjectExample" t="Include">
+                  <e p="ScriptableObjectExample.cs" t="Include" />
+                </e>
+              </e>
+            </e>
+          </e>
+          <e p="LICENSE.txt" t="Include" />
         </e>
         <e p="Scripts" t="Include">
+          <e p="Physarum.compute" t="Include" />
           <e p="Physarum.cs" t="Include" />
         </e>
         <e p="TutorialInfo" t="Include">
@@ -21,6 +49,8 @@
         </e>
       </e>
       <e p="Colicelium.sln" t="IncludeFlat" />
+      <e p="EasyButtons.csproj" t="IncludeRecursive" />
+      <e p="EasyButtons.Editor.csproj" t="IncludeRecursive" />
       <e p="obj" t="ExcludeRecursive" />
       <e p="Packages" t="ExcludeRecursive" />
       <e p="Temp/bin" t="ExcludeRecursive" />

@@ -350,6 +350,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 525c6905e7e9c4daab3c144c3f5d7d01, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  agentCount: 1000
+  cs: {fileID: 7200000, guid: 693eaaef45d0f4fc7867356869796861, type: 3}
+  outMat: {fileID: 2100000, guid: e325b79b52dd04b118219f7164fe6d84, type: 2}
+  rez: 1080
 --- !u!23 &1400947905
 MeshRenderer:
   m_ObjectHideFlags: 0

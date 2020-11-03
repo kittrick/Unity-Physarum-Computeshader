@@ -1,0 +1,225 @@
+﻿#pragma enable_d3d11_debug_symbols
+
+// Reset
+#pragma kernel ResetTextureKernel
+#pragma kernel ResetAgentsKernel
+
+// Step
+#pragma kernel MoveAgentsKernel
+#pragma kernel WriteTrailsKernel
+#pragma kernel DiffuseTextureKernel
+
+// Render
+#pragma kernel AgentsDebugKernel
+#pragma kernel RenderKernel
+
+Texture2D<float4> readTex;
+SamplerState sampler_readTex;
+
+RWTexture2D<float4> writeTex;
+RWTexture2D<float4> outTex;
+RWTexture2D<float4> debugTex;
+
+struct Agent
+{
+    float2 position;
+    float2 direction;
+};
+
+RWStructuredBuffer<Agent> agentsBuffer;
+
+uint rez;
+uint stepn;
+uint time;
+float trailDecayFactor;
+int diffusionRange;
+float sensorAngle;
+float2 hitXY;
+int brushSize;
+
+// ------------------------------------------------------------
+// UTIL
+// ------------------------------------------------------------
+
+// via "The Art of Code" on YouTube
+float2 Random(float2 p) {
+    float3 a = frac(p.xyx * float3(123.34, 234.34, 345.65));
+    a += dot(a, a + 34.45);
+    return frac(float2(a.x * a.y, a.y * a.z));
+}
+
+float2 RandomDirection(float2 p) {
+    return (normalize(2.0 * (Random(p)- 0.5)));
+}
+
+// ------------------------------------------------------------
+// RESET
+// ------------------------------------------------------------
+
+[numthreads(1, 1, 1)]
+void ResetTextureKernel(uint3 id : SV_DispatchThreadID)
+{
+    writeTex[id.xy] = 0;
+}
+
+[numthreads(64, 1, 1)]
+void ResetAgentsKernel(uint3 id : SV_DispatchThreadID)
+{
+    Agent a;
+    
+    a.position = Random(id.x * .0001 + time * .001) * rez;
+    a.direction = RandomDirection(id.xx * .01 + sin(time));
+    
+    agentsBuffer[id.x] = a;
+}
+
+// ------------------------------------------------------------
+// STEP
+// ------------------------------------------------------------
+[numthreads(64, 1, 1)]
+void WriteTrailsKernel(uint3 id : SV_DispatchThreadID)
+{
+    Agent a = agentsBuffer[id.x];
+    writeTex[round(a.position)] = clamp(writeTex[round(a.position)] + .1, 0, 1);
+}
+
+// Turn based on surroundings
+float2 NeighborhoodTurns(uint3 id, Agent a)
+{
+    float2 vectors[50];
+    float maxTrail = 0;
+    int i = 0;
+    
+    for (int x = -diffusionRange; x <= diffusionRange; x++) {
+        for (int y = -diffusionRange; y <= diffusionRange; y++){
+            if(!(x == 0 && y == 0)) {
+                float2 direction = float2(x, y);
+                // Hacky, but we are just exploring
+                if (dot(normalize(direction), a.direction) > sensorAngle){
+                    uint2 coord = round(a.position + direction);
+                    
+                    float level = readTex.SampleLevel(sampler_readTex, coord / (float)rez, 0).r;
+                    
+                    if(level == maxTrail){
+                        vectors[i] = normalize(float2(x,y));
+                        i++;
+                    }
+                    else if(level >= maxTrail) {
+                        maxTrail = level;
+                        i = 0;
+                        vectors[i] = normalize(float2(x,y));
+                        i++;
+                    }
+                    
+                    //if(stepn % 2 == 0) {
+                        // Mark blue the neighborhood being read
+                        //debugTex[coord] += float4(0, 0, 1, 0);
+                    //}
+                }
+            }
+        }
+    }
+    float2 d = a.direction;
+    if (maxTrail >= .1) {
+        int index = (i - 1) * round(Random(id.xy * 0.01 + sin(time)).x);
+        d = d + vectors[index] * .9;
+    } else {
+        d = RandomDirection(id.xx * .001 + sin(time));
+    }
+    
+    d = normalize(d);
+    
+    // Mark red the next direction
+    //if (stepn % 2 == 0) {
+    //    debugTex[round(a.position + d)] += float4(1, 0, 0, 0);
+    //}
+    
+    return d;
+}
+
+// Random turn function
+float2 SimpleTurns(uint3 id : SV_DispatchThreadID, Agent a)
+{
+    // We will use round whenever reading from or writing to the grid tex
+    float4 f = readTex[round(a.position + a.direction * 2)];
+    
+    float2 d = a.direction;
+    
+    if(f.x > 0) {
+        d = RandomDirection(id.xx * .01 + sin(time));
+    }
+    
+    return d;
+}
+
+[numthreads(64, 1, 1)]
+void MoveAgentsKernel(uint3 id : SV_DispatchThreadID)
+{
+    Agent a = agentsBuffer[id.x];
+    
+    // Choose next direction
+    a.direction = NeighborhoodTurns(id, a);
+    
+    // Move Forward
+    a.position = a.position + a.direction;
+    
+    // Boundaries: Wrap
+    if(a.position.x < 0){
+        a.position.x = rez - 1;
+    }
+    if(a.position.y < 0){
+        a.position.y = rez - 1;
+    }
+    a.position % float2(rez, rez);
+    
+    if(stepn % 2 == 1) {
+        agentsBuffer[id.x] = a;
+    }
+}
+
+[numthreads(1, 1, 1)]
+void DiffuseTextureKernel(uint3 id : SV_DispatchThreadID)
+{
+    float4 oc = readTex[id.xy];
+    
+    float avg = 0;
+    int range = 1;
+    int count = 0;
+    for (int x = -range; x <= range; x++){
+        for (int y = -range; y <= range; y++){
+            float2 coord = (id.xy + int2(x,y)) / (float)rez;
+            avg += readTex.SampleLevel(sampler_readTex, coord, 0).r;
+            count++;
+        }
+    }
+    
+    avg /= count;
+    
+    oc = avg * trailDecayFactor;
+    oc = clamp(oc, 0, 1);
+    
+    if((hitXY.x != 0 && hitXY.y != 0) && distance(hitXY, id.xy) < brushSize) {
+        oc += 10;
+    }
+    
+    writeTex[id.xy] = oc;
+}
+
+// ------------------------------------------------------------
+// RENDER
+// ------------------------------------------------------------
+
+[numthreads(1, 1, 1)]
+void RenderKernel(uint3 id : SV_DispatchThreadID)
+{
+    outTex[id.xy] = readTex[id.xy];
+    //outTex[id.xy] += debugTex[id.xy];
+    //debugTex[id.xy] = 0;
+}
+
+[numthreads(64, 1, 1)]
+void AgentsDebugKernel(uint3 id : SV_DispatchThreadID)
+{
+    Agent a = agentsBuffer[id.x];
+    outTex[round(a.position)] += float4(0, .1, 0, 0);
+}
