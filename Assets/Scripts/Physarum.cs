@@ -26,14 +26,17 @@ public class Physarum : MonoBehaviour
     public float sensorAngle = 45;
 
     [Header("Physics")]
+    public bool usePhysics = true;
     [Range(0, 100)]
     public float mass = 1;
     [Range(0, 100)]
     public float drag = 0;
     [Range(0, 100)]
     public float speed = 1;
-    [Range(0, 100)]
+    [Range(1, 100)]
     public float sensorForce = 1;
+    [Range(0, 100)]
+    public float maxVelocity = 5;
 
     [Header("Mouse Input")]
     [Range(0, 100)]
@@ -195,9 +198,11 @@ public class Physarum : MonoBehaviour
         cs.SetInt("sensorCount", sensorCount);
         cs.SetFloat("sensorRange", sensorRange);
         cs.SetFloat("sensorAngle", sensorAngle);
+        cs.SetBool("usePhysics", usePhysics);
         cs.SetFloat("mass", mass);
         cs.SetFloat("drag", drag);
         cs.SetFloat("speed", speed);
+        cs.SetVector("maxVelocity", new Vector2(maxVelocity, maxVelocity));
         cs.SetFloat("sensorForce", sensorForce);
         cs.Dispatch(diffuseTextureKernel, rez / 32, rez / 32, 1);
     }
@@ -298,6 +303,8 @@ public class Physarum : MonoBehaviour
 
     private void OnApplicationQuit()
     {
+        agentsBuffer.Release();
+        agentsBuffer.Dispose();
         Release();
     }
 

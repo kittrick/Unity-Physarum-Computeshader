@@ -42,10 +42,12 @@ float2 hitXY;
 int brushSize;
 
 // Physics
+bool usePhysics;
 float mass;
 float drag;
 float speed;
 float sensorForce;
+float2 maxVelocity;
 
 // ------------------------------------------------------------
 // UTIL
@@ -221,8 +223,8 @@ float2 SensorTurn(uint3 id, Agent a)
     float2 d = RotateAroundPoint(a.direction, float2(0,0), angles[bestSensor]);
     d = normalize(d);
     
-    // Return new direction
-    return d;
+    // Return new direction multiplied by value of best sensor
+    return d * (maxVal * sensorForce);
 }
 
 [numthreads(64, 1, 1)]
@@ -231,15 +233,20 @@ void MoveAgentsKernel(uint3 id : SV_DispatchThreadID)
     Agent a = agentsBuffer[id.x];
     
     // Basic Movement
-    //a.direction = SensorTurn(id, a);
-    //a.position = a.position + a.direction * speed;
-    
+    if(!usePhysics){
+        a.direction = SensorTurn(id, a);
+        a.position = a.position + a.direction * speed;
+    } else {
     // Physics based movement
-    a = applyForce(a, SensorTurn(id, a) * sensorForce);
-    a = applyDrag(a, drag);
-    a.velocity += a.acceleration;
-    a.position += a.velocity * speed;
-    a.acceleration *= 0;
+        a = applyForce(a, SensorTurn(id, a));
+        a = applyDrag(a, drag);
+        a.velocity += a.acceleration;
+        if(a.velocity.x > maxVelocity.x || a.velocity.y > maxVelocity.y){
+            a.velocity = maxVelocity;
+        }
+        a.position += a.velocity * speed;
+        a.acceleration *= 0;
+    }
     
     // Boundaries: Wrap
     if(a.position.x <= 0){

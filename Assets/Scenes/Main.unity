@@ -409,7 +409,7 @@ MonoBehaviour:
   drag: 1
   speed: 3
   sensorForce: 1
-  twist: 1
+  maxVelocity: 5
   brushSize: 10
   interactivePlane: {fileID: 1400947903}
   cam: {fileID: 1248560898}
