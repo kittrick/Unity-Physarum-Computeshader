@@ -10,7 +10,6 @@
 #pragma kernel DiffuseTextureKernel
 
 // Render
-#pragma kernel AgentsDebugKernel
 #pragma kernel RenderKernel
 
 Texture2D<float4> readTex;
@@ -22,6 +21,9 @@ RWTexture2D<float4> debugTex;
 
 struct Agent
 {
+    float mass;
+    float2 velocity;
+    float2 acceleration;
     float2 position;
     float2 direction;
 };
@@ -38,6 +40,12 @@ float sensorRange;
 float sensorAngle;
 float2 hitXY;
 int brushSize;
+
+// Physics
+float mass;
+float drag;
+float speed;
+float sensorForce;
 
 // ------------------------------------------------------------
 // UTIL
@@ -82,10 +90,63 @@ float2 RotateAroundPoint(float2 p, float2 pivot, float angle) {
 }
 
 // ------------------------------------------------------------
+// Physics Stuff
+// ------------------------------------------------------------
+Agent applyForce(Agent p, float2 force)
+{
+    force /= p.mass;
+    p.acceleration += force;
+    return p;
+}
+
+Agent applyDrag(Agent p, float coefficient)
+{
+    float speed = length(p.velocity);
+    
+    // The force’s magnitude
+    float dragMagnitude = coefficient * speed * speed;
+ 
+    float2 drag = p.velocity;
+    drag *= -1;
+    
+    // The force's direction: -1 * velocity
+    drag = normalize(drag);
+ 
+    // Finalize the force: magnitude and direction together.
+    drag *= dragMagnitude;
+ 
+    // Apply the force.
+    p = applyForce(p, drag);
+    return p;
+}
+
+Agent attract(Agent p, float2 attractionPoint, float attractionStrength)
+{
+    float2 force = p.position - attractionPoint;
+    float distance = length(force);
+    force = normalize(force);
+    float strength = (attractionStrength * p.mass) / (distance * distance);
+    force *= strength;
+    p = applyForce(p, -force);
+    return p;
+}
+
+Agent repel(Agent p, float2 attractionPoint, float attractionStrength)
+{
+    float2 force = p.position - attractionPoint;
+    float distance = length(force);
+    force = normalize(force);
+    float strength = (attractionStrength * p.mass) / (distance * distance);
+    force *= strength;
+    p = applyForce(p, force);
+    return p;
+}
+
+// ------------------------------------------------------------
 // RESET
 // ------------------------------------------------------------
 
-[numthreads(1, 1, 1)]
+[numthreads(32, 32, 1)]
 void ResetTextureKernel(uint3 id : SV_DispatchThreadID)
 {
     writeTex[id.xy] = 0;
@@ -97,7 +158,10 @@ void ResetAgentsKernel(uint3 id : SV_DispatchThreadID)
     Agent a;
     
     a.position = Random(id.x * .0001 + time * .001) * rez;
+    a.mass = mass;
     a.direction = RandomDirection(id.xx * .01 + sin(time));
+    a.velocity = RandomDirection(id.xx * .01 + sin(time));
+    a.acceleration = 0;
     
     agentsBuffer[id.x] = a;
 }
@@ -166,32 +230,42 @@ void MoveAgentsKernel(uint3 id : SV_DispatchThreadID)
 {
     Agent a = agentsBuffer[id.x];
     
-    // Choose next direction
-    a.direction = SensorTurn(id, a);
+    // Basic Movement
+    //a.direction = SensorTurn(id, a);
+    //a.position = a.position + a.direction * speed;
     
-    // Move Forward
-    a.position = a.position + a.direction;
+    // Physics based movement
+    a = applyForce(a, SensorTurn(id, a) * sensorForce);
+    a = applyDrag(a, drag);
+    a.velocity += a.acceleration;
+    a.position += a.velocity * speed;
+    a.acceleration *= 0;
     
     // Boundaries: Wrap
-    if(a.position.x < 0){
+    if(a.position.x <= 0){
         a.position.x = rez - 1;
     }
-    if(a.position.y < 0){
+    if(a.position.y <= 0){
         a.position.y = rez - 1;
     }
-    a.position % float2(rez, rez);
+    if(a.position.x >= float(rez)){
+        a.position.x = 1;
+    }
+    if(a.position.y >= float(rez)){
+        a.position.y = 1;
+    }
     
     if(stepn % 2 == 1) {
         agentsBuffer[id.x] = a;
     }
 }
 
-[numthreads(1, 1, 1)]
+[numthreads(32, 32, 1)]
 void DiffuseTextureKernel(uint3 id : SV_DispatchThreadID)
 {
     float4 oc = readTex[id.xy];
     
-    float avg = 0;
+    float avg = 0.0;
     int range = 1;
     int count = 0;
     for (int x = -range; x <= range; x++){
@@ -208,7 +282,7 @@ void DiffuseTextureKernel(uint3 id : SV_DispatchThreadID)
     oc = clamp(oc, 0, 1);
     
     if((hitXY.x != 0 && hitXY.y != 0) && distance(hitXY, id.xy) < brushSize) {
-        oc += 10;
+        oc += 1;
     }
     
     writeTex[id.xy] = oc;
@@ -218,7 +292,7 @@ void DiffuseTextureKernel(uint3 id : SV_DispatchThreadID)
 // RENDER
 // ------------------------------------------------------------
 
-[numthreads(1, 1, 1)]
+[numthreads(32, 32, 1)]
 void RenderKernel(uint3 id : SV_DispatchThreadID)
 {
     
@@ -229,11 +303,4 @@ void RenderKernel(uint3 id : SV_DispatchThreadID)
     }
     outTex[id.xy] += debugTex[id.xy];
     debugTex[id.xy] = 0;
-}
-
-[numthreads(64, 1, 1)]
-void AgentsDebugKernel(uint3 id : SV_DispatchThreadID)
-{
-    Agent a = agentsBuffer[id.x];
-    outTex[round(a.position)] += float4(0, .1, 0, 0);
 }

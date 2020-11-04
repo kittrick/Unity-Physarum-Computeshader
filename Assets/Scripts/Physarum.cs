@@ -25,6 +25,16 @@ public class Physarum : MonoBehaviour
     [Range(0, 360)]
     public float sensorAngle = 45;
 
+    [Header("Physics")]
+    [Range(0, 100)]
+    public float mass = 1;
+    [Range(0, 100)]
+    public float drag = 0;
+    [Range(0, 100)]
+    public float speed = 1;
+    [Range(0, 100)]
+    public float sensorForce = 1;
+
     [Header("Mouse Input")]
     [Range(0, 100)]
     public int brushSize = 10;
@@ -53,8 +63,7 @@ public class Physarum : MonoBehaviour
     private RenderTexture readTex;
     private RenderTexture writeTex;
     private RenderTexture debugTex;
-
-    private int agentsDebugKernel;
+    
     private int moveAgentsKernel;
     private int writeTrailsKernel;
     private int renderKernel;
@@ -99,10 +108,10 @@ public class Physarum : MonoBehaviour
 
         kernel = cs.FindKernel("ResetTextureKernel");
         cs.SetTexture(kernel, "writeTex", writeTex);
-        cs.Dispatch(kernel, rez, rez, 1);
+        cs.Dispatch(kernel, rez / 32, rez / 32, 1);
         
         cs.SetTexture(kernel, "writeTex", readTex);
-        cs.Dispatch(kernel, rez, rez, 1);
+        cs.Dispatch(kernel, rez / 32, rez / 32, 1);
 
         kernel = cs.FindKernel("ResetAgentsKernel");
         cs.SetBuffer(kernel, "agentsBuffer", agentsBuffer);
@@ -186,7 +195,11 @@ public class Physarum : MonoBehaviour
         cs.SetInt("sensorCount", sensorCount);
         cs.SetFloat("sensorRange", sensorRange);
         cs.SetFloat("sensorAngle", sensorAngle);
-        cs.Dispatch(diffuseTextureKernel, rez, rez, 1);
+        cs.SetFloat("mass", mass);
+        cs.SetFloat("drag", drag);
+        cs.SetFloat("speed", speed);
+        cs.SetFloat("sensorForce", sensorForce);
+        cs.Dispatch(diffuseTextureKernel, rez / 32, rez / 32, 1);
     }
 
     private void GPUMoveAgentsKernel()
@@ -217,9 +230,9 @@ public class Physarum : MonoBehaviour
     public void Render()
     {
         GPURenderKernel();
-        //GPUAgentsDebugKernel();
-        
+
         outMat.SetTexture("_BaseMap", outTex);
+        outMat.SetTexture("_EmissionMap", outTex);
         if (!Application.isPlaying)
         {
             UnityEditor.SceneView.RepaintAll();
@@ -232,15 +245,7 @@ public class Physarum : MonoBehaviour
        cs.SetTexture(renderKernel, "outTex", outTex);
        cs.SetTexture(renderKernel, "debugTex", debugTex);
        cs.SetVector("hitXY", hitXY);
-       cs.Dispatch(renderKernel, rez, rez, 1);
-    }
-
-    private void GPUAgentsDebugKernel()
-    {
-        cs.SetBuffer(agentsDebugKernel, "agentsBuffer", agentsBuffer);
-        cs.SetTexture(agentsDebugKernel, "outTex", outTex);
-        
-        cs.Dispatch(agentsDebugKernel, agentsCount / 64, 1, 1);
+       cs.Dispatch(renderKernel, rez / 32, rez / 32, 1);
     }
 
     // ------------------------------
@@ -255,6 +260,7 @@ public class Physarum : MonoBehaviour
                 if (buffer != null)
                 {
                     buffer.Release();
+                    buffer.Dispose();
                 }
             }
         }
@@ -286,6 +292,11 @@ public class Physarum : MonoBehaviour
     }
     
     private void OnDisable()
+    {
+        Release();
+    }
+
+    private void OnApplicationQuit()
     {
         Release();
     }
