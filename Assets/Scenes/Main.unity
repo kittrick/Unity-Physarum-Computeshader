@@ -399,17 +399,18 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 525c6905e7e9c4daab3c144c3f5d7d01, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  agentsCount: 100000
-  trailDecayFactor: 0.5
+  agentsCount: 1000000
+  trailDecayFactor: 0.272
   diffusionRange: 1
   sensorCount: 3
   sensorRange: 30
-  sensorAngle: 30
+  sensorAngle: 45
+  usePhysics: 1
   mass: 1
-  drag: 1
-  speed: 3
+  drag: 0.1
+  speed: 1
   sensorForce: 1
-  maxVelocity: 5
+  maxVelocity: 2
   brushSize: 10
   interactivePlane: {fileID: 1400947903}
   cam: {fileID: 1248560898}
